@@ -78,4 +78,4 @@ mining claims or locating property boundaries.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.    
+This project is licensed under EPL‑2.0. See the LICENSE file for details.    
