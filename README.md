@@ -12,8 +12,9 @@ browser.
 ## What it does
 
 - Looks up real, surveyed aliquot-part boundaries from BLM's live **PLSS
-  CadNSDI** database for California's three principal meridians (Humboldt,
-  Mount Diablo, San Bernardino).
+  CadNSDI** database across eleven public-land states: California, Arizona,
+  Nevada, Oregon, Washington, Idaho, Utah, Montana, Wyoming, Colorado, and
+  New Mexico.
 - Returns GPS coordinates for any corner (NE/NW/SE/SW) or the center of the
   parcel, in decimal degrees and DMS.
 - Lets you assemble a claim that spans multiple sections by calculating each
@@ -45,20 +46,38 @@ BLM CadNSDI positional accuracy varies by county and survey vintage —
 typically better than a few meters in well-resurveyed areas, occasionally
 coarser in remote or older-survey areas. Coordinates are returned in the
 service's NAD83 datum reprojected to WGS84 (EPSG:4326); NAD83 and current
-WGS84 can differ by roughly 1–2 meters in California due to tectonic drift.
+WGS84 can differ by roughly 1–2 meters depending on region (more pronounced
+in tectonically active areas like California and the Pacific Northwest due
+to plate motion).
 
 ## Scope / limitations
 
-- California only for now (Humboldt, Mount Diablo, San Bernardino
-  Meridians). Extending to other states/meridians is straightforward — the
-  BLM service and field structure are the same nationwide, it just needs the
-  right `PRINMERCD` codes and a places to plug in the meridian dropdown.
+- Covers eleven public-land states and their principal meridians:
+  - California — Humboldt, Mount Diablo, San Bernardino
+  - Arizona — Gila and Salt River, Navajo, San Bernardino
+  - Nevada — Mount Diablo
+  - Oregon & Washington — Willamette
+  - Idaho — Boise
+  - Utah — Salt Lake, Uintah
+  - Montana — Montana Principal
+  - Wyoming — 6th Principal, Wind River
+  - Colorado — 6th Principal, New Mexico Principal, Ute
+  - New Mexico — New Mexico Principal
+
+  Adding more states/meridians is straightforward — the BLM service and
+  field structure are the same nationwide, it just needs the right
+  `PRINMERCD` codes (verified live against BLM's PLSS Township layer) added
+  to the meridian list and the state dropdown.
 - Fractional/duplicate townships near meridian and baseline lines aren't
   handled by the simple form.
 - Locates *aliquot-part* corners (quarter and quarter-quarter sections) only.
   Government Lots and metes-and-bounds parcels along rivers/shorelines
   aren't aliquot parts and won't be found — the tool's error message will
   say so if your section is lotted.
+- A few principal meridians span more than one state (e.g. Mount Diablo
+  covers both California and Nevada). The free-text parser flags this and
+  defaults to a reasonable guess, but always double-check the State field
+  matches your claim.
 
 ## Data source & credit
 
@@ -78,4 +97,10 @@ mining claims or locating property boundaries.
 
 ## License
 
-This project is licensed under EPL‑2.0. See the LICENSE file for details.    
+Eclipse Public License - v 2.0 (EPL-2.0). SPDX-License-Identifier: `EPL-2.0`.
+
+Before publishing, add a `LICENSE` file to the repo containing the full
+EPL-2.0 text from the canonical source: https://www.eclipse.org/legal/epl-2.0/
+(a tool-level restriction on this session prevented reproducing the full
+legal text verbatim here, so copy it directly from that link rather than
+from this README).

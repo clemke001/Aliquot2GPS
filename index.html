@@ -1,3 +1,13 @@
+<!--
+  Aliquot Parts to GPS Calculator
+  Copyright (c) 2026 Charles Lemke
+
+  This program and the accompanying materials are made available under the
+  terms of the Eclipse Public License 2.0 which is available at
+  https://www.eclipse.org/legal/epl-2.0/
+
+  SPDX-License-Identifier: EPL-2.0
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,6 +169,7 @@
       <div>
         <h1>Aliquot Parts to GPS Calculator</h1>
         <div class="sub">Enter a PLSS aliquot-part legal description (Meridian, Township, Range, Section, Quarter) and get the GPS coordinates of any corner of that parcel, pulled from BLM's official PLSS CadNSDI survey database &mdash; not idealized geometry.</div>
+        <div class="sub" style="margin-top:6px;"><strong>States covered:</strong> CA / AZ / NV / OR / WA / ID / UT / MT / WY / CO / NM</div>
       </div>
       <button type="button" class="readme-btn" id="readmeBtn">README</button>
     </div>
@@ -171,13 +182,13 @@
       <div class="modal-sub">A free tool for turning a PLSS legal description into GPS coordinates using BLM's official survey data.</div>
 
       <h3>What it does</h3>
-      <p>Looks up real, surveyed aliquot-part boundaries (quarter and quarter-quarter sections) from BLM's live PLSS CadNSDI database for California's three principal meridians (Humboldt, Mount Diablo, San Bernardino), and returns GPS coordinates for any corner or the center &mdash; in decimal degrees and DMS. You can assemble a claim spanning multiple sections and export it as GPX (Gaia GPS) or KML (Google Earth), including each parcel's actual surveyed boundary.</p>
+      <p>Looks up real, surveyed aliquot-part boundaries (quarter and quarter-quarter sections) from BLM's live PLSS CadNSDI database across eleven public-land states &mdash; California, Arizona, Nevada, Oregon, Washington, Idaho, Utah, Montana, Wyoming, Colorado, and New Mexico &mdash; and returns GPS coordinates for any corner or the center &mdash; in decimal degrees and DMS. You can assemble a claim spanning multiple sections and export it as GPX (Gaia GPS) or KML (Google Earth), including each parcel's actual surveyed boundary.</p>
 
       <h3>Data source &amp; credit</h3>
       <p>All coordinates come live from the Bureau of Land Management's PLSS CadNSDI (Cadastral National Spatial Data Infrastructure) map service at gis.blm.gov. Thanks to the BLM Cadastral Survey program for maintaining and publishing this data publicly &mdash; none of this works without it.</p>
 
       <h3>Accuracy</h3>
-      <p>This reads real surveyed/GCDB boundary vertices rather than computing idealized 1-mile-square geometry, so it's generally accurate to within a few meters where BLM's underlying data is current &mdash; accuracy varies by county and survey vintage. Coordinates are NAD83 reprojected to WGS84; those two datums can differ by roughly 1&ndash;2 meters in California.</p>
+      <p>This reads real surveyed/GCDB boundary vertices rather than computing idealized 1-mile-square geometry, so it's generally accurate to within a few meters where BLM's underlying data is current &mdash; accuracy varies by county and survey vintage. Coordinates are NAD83 reprojected to WGS84; those two datums can differ by roughly 1&ndash;2 meters depending on region (more pronounced in tectonically active areas like California and the Pacific Northwest due to plate motion).</p>
 
       <h3>Disclaimer</h3>
       <div class="disclaimer-box">
@@ -191,7 +202,7 @@
 
     <div class="field wide">
       <label for="descInput">Paste a Full Description (optional shortcut)</label>
-      <input type="text" id="descInput" placeholder='e.g. N2, SW4, NE4, Section 8, Township 19S, Range 10E, MDM' autocomplete="off">
+      <input type="text" id="descInput" placeholder='e.g. S2, NW4, NE4, Section 10, Township 18N, Range 11E, MDM' autocomplete="off">
     </div>
     <div class="row-actions" style="margin-top:0;">
       <button type="button" class="secondary" id="parseDescBtn">Parse &amp; Fill Fields Below</button>
@@ -202,12 +213,24 @@
     <form id="plssForm">
       <div class="grid">
         <div class="field wide">
-          <label for="meridian">Principal Meridian</label>
-          <select id="meridian">
-            <option value="15">Humboldt Meridian (HM)</option>
-            <option value="21" selected>Mount Diablo Meridian (MDM)</option>
-            <option value="27">San Bernardino Meridian (SBM)</option>
+          <label for="state">State</label>
+          <select id="state">
+            <option value="CA" selected>California</option>
+            <option value="AZ">Arizona</option>
+            <option value="NV">Nevada</option>
+            <option value="OR">Oregon</option>
+            <option value="WA">Washington</option>
+            <option value="ID">Idaho</option>
+            <option value="UT">Utah</option>
+            <option value="MT">Montana</option>
+            <option value="WY">Wyoming</option>
+            <option value="CO">Colorado</option>
+            <option value="NM">New Mexico</option>
           </select>
+        </div>
+        <div class="field wide">
+          <label for="meridian">Principal Meridian</label>
+          <select id="meridian"></select>
         </div>
 
         <div class="field">
@@ -363,7 +386,7 @@
     <div class="note" style="margin-top:0;">
       <p style="margin:0 0 8px;"><strong>Data source.</strong> Coordinates come live from the BLM's official <em>PLSS CadNSDI</em> survey database (the same authoritative dataset used by BLM's own PLSS web viewer), not from idealized 1-mile-square section math. Real sections are irregular &mdash; convergence, historical survey error, and terrain closures mean corners rarely fall exactly where simple geometry would predict. This tool queries the actual surveyed/GCDB boundary for your aliquot part and reads real corner vertices from it.</p>
       <p style="margin:0 0 8px;"><strong>Accuracy.</strong> BLM CadNSDI positional accuracy varies by county and survey vintage &mdash; typically better than a few meters in well-resurveyed areas, occasionally coarser in remote or older-survey areas. Coordinates are returned in the service's NAD83 datum reprojected to WGS84 (EPSG:4326); NAD83 and current WGS84 can differ by roughly 1&ndash;2 meters in California due to tectonic drift, which is usually within your target tolerance but worth knowing if you're cross-checking against a handheld GPS.</p>
-      <p style="margin:0;"><strong>Scope.</strong> Currently covers California's three principal meridians (Humboldt, Mount Diablo, San Bernardino). Fractional/duplicate townships near meridian and baseline lines aren't handled by this simple form. This locates <em>aliquot-part</em> corners (quarter and quarter-quarter sections); Government Lots and metes-and-bounds parcels along rivers/shorelines aren't aliquot parts and won't be found by this tool &mdash; if your section is lotted, the error message will say so.</p>
+      <p style="margin:0;"><strong>Scope.</strong> Currently covers eleven public-land states: California (Humboldt, Mount Diablo, San Bernardino), Arizona (Gila &amp; Salt River, Navajo, San Bernardino), Nevada (Mount Diablo), Oregon &amp; Washington (Willamette), Idaho (Boise), Utah (Salt Lake, Uintah), Montana (Montana Principal), Wyoming (6th Principal, Wind River), and Colorado &amp; New Mexico (New Mexico Principal, plus Colorado's 6th Principal and Ute meridians). Fractional/duplicate townships near meridian and baseline lines aren't handled by this simple form. This locates <em>aliquot-part</em> corners (quarter and quarter-quarter sections); Government Lots and metes-and-bounds parcels along rivers/shorelines aren't aliquot parts and won't be found by this tool &mdash; if your section is lotted, the error message will say so.</p>
     </div>
   </div>
 
@@ -372,8 +395,66 @@
 
 <script>
 const SERVICE_URL = 'https://gis.blm.gov/arcgis/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer/3/query';
-const MERIDIAN_NAMES = { '15': 'Humboldt Meridian', '21': 'Mount Diablo Meridian', '27': 'San Bernardino Meridian' };
-const MERIDIAN_ABBR = { '15': 'HM', '21': 'MDM', '27': 'SBM' };
+
+// Single source of truth for every meridian this tool supports. "states" lists which
+// of our supported states use that meridian (some meridians cross state lines).
+// Codes/names verified live against BLM's PLSS Township layer (MapServer/1) per state.
+const MERIDIAN_DEFS = [
+  { code: '06', name: '6th Principal Meridian',        abbr: '6PM',  states: ['WY', 'CO'], re: /\b6TH\s*(?:PRINCIPAL\s*)?MERIDIAN\b|\bSIXTH\s*(?:PRINCIPAL\s*)?MERIDIAN\b|\b6\s*PM\b/ },
+  { code: '08', name: 'Boise Meridian',                 abbr: 'BM',   states: ['ID'],       re: /\bBOISE\s*MERIDIAN\b|\bBOISE\b|\bBM\b/ },
+  { code: '14', name: 'Gila and Salt River Meridian',   abbr: 'GSRM', states: ['AZ'],       re: /GILA\s*(?:AND|&)?\s*SALT\s*RIVER|\bG\s*&?\s*SRM\b|\bGSRM\b/ },
+  { code: '15', name: 'Humboldt Meridian',              abbr: 'HM',   states: ['CA'],       re: /HUMBOLDT|\bHM\b/ },
+  { code: '20', name: 'Montana Principal Meridian',     abbr: 'MPM',  states: ['MT'],       re: /MONTANA\s*(?:PRINCIPAL\s*)?MERIDIAN|\bMPM\b/ },
+  { code: '21', name: 'Mount Diablo Meridian',          abbr: 'MDM',  states: ['CA', 'NV'], re: /MOUNT\s*DIABLO|MT\s*DIABLO|\bMDM\b|\bM\s*D\s*M\b/ },
+  { code: '22', name: 'Navajo Meridian',                abbr: 'NM',   states: ['AZ'],       re: /NAVAJO\s*MERIDIAN|\bNAVAJO\b/ },
+  { code: '23', name: 'New Mexico Principal Meridian',  abbr: 'NMPM', states: ['NM', 'CO'], re: /NEW\s*MEXICO\s*(?:PRINCIPAL\s*)?MERIDIAN|\bNMPM\b/ },
+  { code: '26', name: 'Salt Lake Meridian',              abbr: 'SLM',  states: ['UT'],       re: /SALT\s*LAKE\s*MERIDIAN|\bSLM\b/ },
+  { code: '27', name: 'San Bernardino Meridian',        abbr: 'SBM',  states: ['CA', 'AZ'], re: /SAN\s*BERNARDINO|\bSBM\b/ },
+  { code: '30', name: 'Uintah Meridian',                 abbr: 'UM',   states: ['UT'],       re: /UINTAH\s*MERIDIAN|\bUM\b/ },
+  { code: '31', name: 'Ute Meridian',                    abbr: 'UteM', states: ['CO'],       re: /\bUTE\s*MERIDIAN\b|\bUTEM\b/ },
+  { code: '33', name: 'Willamette Meridian',             abbr: 'WM',   states: ['OR', 'WA'], re: /WILLAMETTE|\bWM\b/ },
+  { code: '34', name: 'Wind River Meridian',             abbr: 'WRM',  states: ['WY'],       re: /WIND\s*RIVER\s*MERIDIAN|\bWRM\b/ },
+];
+const MERIDIAN_NAMES = Object.fromEntries(MERIDIAN_DEFS.map(d => [d.code, d.name]));
+const MERIDIAN_ABBR = Object.fromEntries(MERIDIAN_DEFS.map(d => [d.code, d.abbr]));
+const MERIDIAN_STATES = Object.fromEntries(MERIDIAN_DEFS.map(d => [d.code, d.states]));
+
+const STATE_NAMES = {
+  CA: 'California', AZ: 'Arizona', NV: 'Nevada', OR: 'Oregon', WA: 'Washington',
+  ID: 'Idaho', UT: 'Utah', MT: 'Montana', WY: 'Wyoming', CO: 'Colorado', NM: 'New Mexico',
+};
+const STATE_MERIDIANS = {};
+for (const stateCode of Object.keys(STATE_NAMES)) {
+  STATE_MERIDIANS[stateCode] = MERIDIAN_DEFS.filter(d => d.states.includes(stateCode)).map(d => d.code);
+}
+
+// (Re)builds the Meridian dropdown to only show meridians valid for the chosen state.
+// Keeps the previous selection if it's still valid for the new state; otherwise falls
+// back to preferredCode if given, defaulting to Mount Diablo for California.
+function populateMeridianOptions(stateAbbr, preferredCode) {
+  const sel = document.getElementById('meridian');
+  const codes = STATE_MERIDIANS[stateAbbr] || [];
+  const prior = preferredCode || sel.value;
+  sel.innerHTML = '';
+  codes.forEach(code => {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = `${MERIDIAN_NAMES[code]} (${MERIDIAN_ABBR[code]})`;
+    sel.appendChild(opt);
+  });
+  if (codes.includes(prior)) {
+    sel.value = prior;
+  } else if (stateAbbr === 'CA' && codes.includes('21')) {
+    sel.value = '21';
+  } else if (codes.length) {
+    sel.value = codes[0];
+  }
+}
+populateMeridianOptions('CA', '21');
+document.getElementById('state').addEventListener('change', (e) => {
+  populateMeridianOptions(e.target.value);
+});
+
 let lastResult = null;
 let claimParcels = [];
 
@@ -553,7 +634,7 @@ async function fetchJson(url, ms) {
 
 function buildWhere(base, extra) {
   const clauses = [
-    `STATEABBR='CA'`,
+    `STATEABBR='${base.stateabbr}'`,
     `PRINMERCD='${base.prinmercd}'`,
     `TWNSHPNO='${pad(base.twp, 3)}'`,
     `TWNSHPDIR='${base.twpdir}'`,
@@ -738,10 +819,17 @@ function parseDescription(raw) {
   const rngdir = rngMatch ? rngMatch[2][0] : null;
 
   let meridian = null;
-  if (/MOUNT\s*DIABLO|MT\s*DIABLO|\bMDM\b|\bM\s*D\s*M\b/.test(norm)) meridian = '21';
-  else if (/HUMBOLDT|\bHM\b/.test(norm)) meridian = '15';
-  else if (/SAN\s*BERNARDINO|\bSBM\b/.test(norm)) meridian = '27';
-  if (!meridian) errors.push('Could not identify the Meridian (Humboldt/HM, Mount Diablo/MDM, or San Bernardino/SBM).');
+  for (const def of MERIDIAN_DEFS) {
+    if (def.re.test(norm)) { meridian = def.code; break; }
+  }
+  let ambiguousStates = null;
+  if (!meridian) {
+    errors.push('Could not identify the Meridian (' + MERIDIAN_DEFS.map(d => `${d.name}/${d.abbr}`).join(', ') + ').');
+  } else if (MERIDIAN_STATES[meridian].length > 1) {
+    // Some meridians cross state lines (e.g. Mount Diablo covers both CA and NV) —
+    // the text alone can't tell us which state, so flag it for the caller to warn about.
+    ambiguousStates = MERIDIAN_STATES[meridian];
+  }
 
   let aliquot = null;
   if (secMatch) {
@@ -759,7 +847,7 @@ function parseDescription(raw) {
     }
   }
 
-  return { section, twp, twpdir, rng, rngdir, meridian, aliquot, errors };
+  return { section, twp, twpdir, rng, rngdir, meridian, ambiguousStates, aliquot, errors };
 }
 
 document.getElementById('parseDescBtn').addEventListener('click', () => {
@@ -772,7 +860,19 @@ document.getElementById('parseDescBtn').addEventListener('click', () => {
   }
   const parsed = parseDescription(raw);
 
-  if (parsed.meridian) document.getElementById('meridian').value = parsed.meridian;
+  let stateNote = '';
+  if (parsed.meridian) {
+    const compatible = MERIDIAN_STATES[parsed.meridian] || [];
+    const curState = document.getElementById('state').value;
+    const stateToUse = compatible.includes(curState) ? curState : compatible[0];
+    if (stateToUse) {
+      document.getElementById('state').value = stateToUse;
+      populateMeridianOptions(stateToUse, parsed.meridian);
+    }
+    if (parsed.ambiguousStates) {
+      stateNote = ` Note: ${MERIDIAN_NAMES[parsed.meridian]} is used in more than one state (${parsed.ambiguousStates.map(s => STATE_NAMES[s]).join(', ')}) — defaulted State to ${STATE_NAMES[stateToUse]}; change it above if this claim is actually in another state.`;
+    }
+  }
   if (parsed.twp != null) document.getElementById('twp').value = parsed.twp;
   if (parsed.twpdir) document.getElementById('twpdir').value = parsed.twpdir;
   if (parsed.rng != null) document.getElementById('rng').value = parsed.rng;
@@ -785,8 +885,12 @@ document.getElementById('parseDescBtn').addEventListener('click', () => {
   }
 
   if (parsed.errors.length) {
-    statusEl.textContent = 'Filled in what I could parse, but: ' + parsed.errors.join(' ') + ' Please check/fill the rest manually below.';
+    statusEl.textContent = 'Filled in what I could parse, but: ' + parsed.errors.join(' ') + ' Please check/fill the rest manually below.' + stateNote;
     statusEl.className = 'status err';
+  } else if (stateNote) {
+    statusEl.textContent = 'Parsed —' + stateNote;
+    statusEl.className = 'status ok';
+    document.getElementById('plssForm').requestSubmit();
   } else {
     statusEl.textContent = 'Parsed — calculating…';
     statusEl.className = 'status ok';
@@ -795,7 +899,8 @@ document.getElementById('parseDescBtn').addEventListener('click', () => {
 });
 
 document.getElementById('exampleBtn').addEventListener('click', () => {
-  document.getElementById('meridian').value = '21';
+  document.getElementById('state').value = 'CA';
+  populateMeridianOptions('CA', '21');
   document.getElementById('twp').value = 19;
   document.getElementById('twpdir').value = 'S';
   document.getElementById('rng').value = 12;
@@ -908,6 +1013,7 @@ document.getElementById('plssForm').addEventListener('submit', async (ev) => {
   setStatus('Querying BLM PLSS database…');
 
   const base = {
+    stateabbr: document.getElementById('state').value,
     prinmercd: document.getElementById('meridian').value,
     twp: document.getElementById('twp').value,
     twpdir: document.getElementById('twpdir').value,
@@ -992,7 +1098,7 @@ document.getElementById('plssForm').addEventListener('submit', async (ev) => {
     const qDesc = half ? `${half}½ ${qDescBase}` : qDescBase;
     const cornerLabel = cornerChoice === 'center' ? 'Center' : cornerChoice.toUpperCase() + ' corner';
     document.getElementById('descText').textContent =
-      `${cornerLabel} of ${qDesc} Section ${parseInt(base.section,10)}, T${base.twp}${base.twpdir} R${base.rng}${base.rngdir}, ${meridianName}`;
+      `${cornerLabel} of ${qDesc} Section ${parseInt(base.section,10)}, T${base.twp}${base.twpdir} R${base.rng}${base.rngdir}, ${meridianName}, ${STATE_NAMES[base.stateabbr] || base.stateabbr}`;
 
     document.getElementById('acreBadge').textContent = totalAcres.toFixed(2) + (computedHalf ? ' acres (computed)' : ' GIS acres') + (pieceCount > 1 ? ` (${pieceCount} pieces, largest used for corners)` : '');
 
@@ -1023,7 +1129,7 @@ document.getElementById('plssForm').addEventListener('submit', async (ev) => {
     }
 
     const meridianAbbr = MERIDIAN_ABBR[base.prinmercd] || meridianName;
-    const parcelLabel = `Sec ${parseInt(base.section, 10)} ${qDesc}, T${base.twp}${base.twpdir} R${base.rng}${base.rngdir} ${meridianAbbr}`;
+    const parcelLabel = `Sec ${parseInt(base.section, 10)} ${qDesc}, T${base.twp}${base.twpdir} R${base.rng}${base.rngdir} ${meridianAbbr} (${base.stateabbr})`;
 
     lastResult = {
       descText: document.getElementById('descText').textContent,
