@@ -78,6 +78,4 @@ mining claims or locating property boundaries.
 
 ## License
 
-Not yet decided — pick one before publishing (MIT is a reasonable default for
-a free permissive tool like this: add a `LICENSE` file with your name and
-the current year).
+This project is licensed under the MIT License. See the LICENSE file for details.    
