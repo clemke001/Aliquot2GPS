@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aliquot Parts to GPS Calculator</title>
+<style>
+  :root {
+    --ink: #1c2321;
+    --ink-soft: #4a5450;
+    --paper: #faf8f3;
+    --panel: #ffffff;
+    --line: #dcd6c8;
+    --accent: #6b5b3a;
+    --accent-dark: #4a3f28;
+    --good: #2f6b3f;
+    --warn: #8a5a1e;
+    --bad: #a3372e;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { margin-bottom: 22px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 0.92rem; max-width: 640px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+  .panel h2 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin: 0 0 14px;
+    font-weight: 700;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px 16px;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.wide { grid-column: 1 / -1; }
+  label { font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; }
+  select, input[type=number] {
+    font-size: 0.95rem;
+    padding: 8px 9px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+  button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 7px;
+    border: 1px solid var(--accent-dark);
+    background: var(--accent-dark);
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover { background: #3a3220; }
+  button.secondary {
+    background: transparent;
+    color: var(--accent-dark);
+    border: 1px solid var(--line);
+  }
+  button.secondary:hover { background: #f0ece0; }
+  button:disabled { opacity: 0.55; cursor: default; }
+  .status { font-size: 0.85rem; color: var(--ink-soft); margin-top: 4px; }
+  .status.err { color: var(--bad); font-weight: 600; }
+  .status.ok { color: var(--good); font-weight: 600; }
+  #results { display: none; }
+  .headline {
+    display: flex; flex-wrap: wrap; gap: 24px; align-items: baseline;
+    padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line);
+  }
+  .headline .desc { font-size: 0.95rem; color: var(--ink-soft); }
+  .coord-block { display: flex; flex-wrap: wrap; gap: 28px; margin-bottom: 6px; }
+  .coord-item .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 2px; }
+  .coord-item .v { font-family: var(--mono); font-size: 1.15rem; font-weight: 600; }
+  .links { margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .links a { color: var(--accent-dark); font-size: 0.85rem; text-decoration: none; border-bottom: 1px dotted var(--accent-dark); }
+  .links a:hover { color: var(--bad); }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink-soft); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.mono, .mono { font-family: var(--mono); }
+  .badge {
+    display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 999px; background: #eee7d4; color: var(--accent-dark); margin-left: 8px;
+  }
+  .note {
+    font-size: 0.83rem; color: var(--ink-soft); background: #f4f0e4;
+    border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-top: 14px;
+  }
+  .note strong { color: var(--ink); }
+  details summary { cursor: pointer; font-size: 0.85rem; color: var(--accent-dark); font-weight: 600; margin-top: 10px; }
+  pre {
+    background: #f4f0e4; border: 1px solid var(--line); border-radius: 6px;
+    padding: 10px; font-size: 0.75rem; overflow-x: auto; max-height: 260px;
+  }
+  footer { color: var(--ink-soft); font-size: 0.78rem; margin-top: 26px; text-align: center; }
+  .header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .readme-btn {
+    font-family: inherit; font-size: 0.82rem; font-weight: 600; padding: 7px 14px;
+    border-radius: 7px; border: 1px solid var(--line); background: #fff; color: var(--accent-dark);
+    cursor: pointer; white-space: nowrap;
+  }
+  .readme-btn:hover { background: #f0ece0; }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(28,35,33,0.55);
+    z-index: 100; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    max-width: 640px; width: 100%; padding: 26px 28px; position: relative;
+  }
+  .modal-box h2 { font-size: 1.25rem; margin: 0 0 4px; }
+  .modal-box h3 {
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent);
+    margin: 18px 0 8px; font-weight: 700;
+  }
+  .modal-box p { font-size: 0.9rem; color: var(--ink); margin: 0 0 8px; line-height: 1.55; }
+  .modal-box .modal-sub { color: var(--ink-soft); font-size: 0.85rem; margin-bottom: 4px; }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px; background: none; border: none;
+    font-size: 1.3rem; line-height: 1; color: var(--ink-soft); cursor: pointer; padding: 4px 8px;
+  }
+  .modal-close:hover { color: var(--bad); }
+  .disclaimer-box {
+    background: #f4f0e4; border: 1px solid var(--line); border-left: 4px solid var(--warn);
+    border-radius: 6px; padding: 12px 14px; margin-top: 6px;
+  }
+  .disclaimer-box p { margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="header-row">
+      <div>
+        <h1>Aliquot Parts to GPS Calculator</h1>
+        <div class="sub">Enter a PLSS aliquot-part legal description (Meridian, Township, Range, Section, Quarter) and get the GPS coordinates of any corner of that parcel, pulled from BLM's official PLSS CadNSDI survey database &mdash; not idealized geometry.</div>
+      </div>
+      <button type="button" class="readme-btn" id="readmeBtn">README</button>
+    </div>
+  </header>
+
+  <div class="modal-overlay" id="readmeModal">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="readmeTitle">
+      <button type="button" class="modal-close" id="readmeCloseBtn" aria-label="Close">&times;</button>
+      <h2 id="readmeTitle">Aliquot Parts to GPS Calculator</h2>
+      <div class="modal-sub">A free tool for turning a PLSS legal description into GPS coordinates using BLM's official survey data.</div>
+
+      <h3>What it does</h3>
+      <p>Looks up real, surveyed aliquot-part boundaries (quarter and quarter-quarter sections) from BLM's live PLSS CadNSDI database for California's three principal meridians (Humboldt, Mount Diablo, San Bernardino), and returns GPS coordinates for any corner or the center &mdash; in decimal degrees and DMS. You can assemble a claim spanning multiple sections and export it as GPX (Gaia GPS) or KML (Google Earth), including each parcel's actual surveyed boundary.</p>
+
+      <h3>Data source &amp; credit</h3>
+      <p>All coordinates come live from the Bureau of Land Management's PLSS CadNSDI (Cadastral National Spatial Data Infrastructure) map service at gis.blm.gov. Thanks to the BLM Cadastral Survey program for maintaining and publishing this data publicly &mdash; none of this works without it.</p>
+
+      <h3>Accuracy</h3>
+      <p>This reads real surveyed/GCDB boundary vertices rather than computing idealized 1-mile-square geometry, so it's generally accurate to within a few meters where BLM's underlying data is current &mdash; accuracy varies by county and survey vintage. Coordinates are NAD83 reprojected to WGS84; those two datums can differ by roughly 1&ndash;2 meters in California.</p>
+
+      <h3>Disclaimer</h3>
+      <div class="disclaimer-box">
+        <p><strong>For educational and informational purposes only.</strong> This tool is provided as-is, with no warranty of any kind. It is not a substitute for a licensed land survey. Always independently verify any coordinates &mdash; against official BLM records and, where it matters, a licensed surveyor &mdash; before relying on them for legal, financial, or safety-critical decisions, including staking mining claims or locating property boundaries. Thanks to BLM for the data; any errors in how this tool uses it are the author's alone.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Legal Description</h2>
+
+    <div class="field wide">
+      <label for="descInput">Paste a Full Description (optional shortcut)</label>
+      <input type="text" id="descInput" placeholder='e.g. S2, NW4, NE4, Section 10, Township 18N, Range 11E, MDM' autocomplete="off">
+    </div>
+    <div class="row-actions" style="margin-top:0;">
+      <button type="button" class="secondary" id="parseDescBtn">Parse &amp; Fill Fields Below</button>
+      <span class="status" id="parseStatus"></span>
+    </div>
+    <div style="border-top:1px solid var(--line); margin:18px 0;"></div>
+
+    <form id="plssForm">
+      <div class="grid">
+        <div class="field wide">
+          <label for="meridian">Principal Meridian</label>
+          <select id="meridian">
+            <option value="15">Humboldt Meridian (HM)</option>
+            <option value="21" selected>Mount Diablo Meridian (MDM)</option>
+            <option value="27">San Bernardino Meridian (SBM)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="twp">Township No.</label>
+          <input type="number" id="twp" min="1" max="999" value="19" required>
+        </div>
+        <div class="field">
+          <label for="twpdir">Township Dir.</label>
+          <select id="twpdir">
+            <option value="N">North</option>
+            <option value="S" selected>South</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rng">Range No.</label>
+          <input type="number" id="rng" min="1" max="999" value="12" required>
+        </div>
+        <div class="field">
+          <label for="rngdir">Range Dir.</label>
+          <select id="rngdir">
+            <option value="E" selected>East</option>
+            <option value="W">West</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="section">Section No.</label>
+          <input type="number" id="section" min="1" max="36" value="2" required>
+        </div>
+        <div class="field">
+          <label for="half">1st: Half (optional)</label>
+          <select id="half">
+            <option value="">&mdash; none &mdash;</option>
+            <option value="N">N &frac12; (North half)</option>
+            <option value="S">S &frac12; (South half)</option>
+            <option value="E">E &frac12; (East half)</option>
+            <option value="W">W &frac12; (West half)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="qtrqtr">2nd: Quarter of a Quarter (optional)</label>
+          <select id="qtrqtr">
+            <option value="">&mdash; whole quarter (160 ac) &mdash;</option>
+            <option value="NE" selected>NE &frac14;</option>
+            <option value="NW">NW &frac14;</option>
+            <option value="SE">SE &frac14;</option>
+            <option value="SW">SW &frac14;</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="quarter">3rd: Quarter of Section (required)</label>
+          <select id="quarter">
+            <option value="NE">NE &frac14;</option>
+            <option value="NW">NW &frac14;</option>
+            <option value="SE" selected>SE &frac14;</option>
+            <option value="SW">SW &frac14;</option>
+          </select>
+        </div>
+        <div class="field wide" style="margin-top:-6px;">
+          <span class="status">Read top to bottom in the same order as the description: e.g. "S2, NW4, NE4" = 1st Half S, 2nd Quarter-of-Quarter NW, 3rd Quarter of Section NE.</span>
+        </div>
+        <div class="field">
+          <label for="corner">Corner to Locate</label>
+          <select id="corner">
+            <option value="center">Center of parcel</option>
+            <option value="ne">NE corner</option>
+            <option value="nw">NW corner</option>
+            <option value="se" selected>SE corner</option>
+            <option value="sw">SW corner</option>
+          </select>
+        </div>
+        <div class="field wide">
+          <label for="claimName">Claim Name (used when exporting)</label>
+          <input type="text" id="claimName" placeholder="e.g. Lucky Strike #1" maxlength="80" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="row-actions">
+        <button type="submit" id="calcBtn">Calculate GPS Coordinates</button>
+        <button type="button" class="secondary" id="exampleBtn">Load Example</button>
+        <span class="status" id="status"></span>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel" id="results">
+    <h2>Result</h2>
+    <div class="headline">
+      <div>
+        <div class="k" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)">Description</div>
+        <div class="desc" id="descText" style="font-weight:600;font-size:1rem;"></div>
+      </div>
+      <span class="badge" id="acreBadge"></span>
+    </div>
+
+    <div class="coord-block">
+      <div class="coord-item">
+        <div class="k">Latitude</div>
+        <div class="v" id="latOut">&mdash;</div>
+      </div>
+      <div class="coord-item">
+        <div class="k">Longitude</div>
+        <div class="v" id="lonOut">&mdash;</div>
+      </div>
+      <div class="coord-item">
+        <div class="k">DMS</div>
+        <div class="v" id="dmsOut" style="font-size:0.95rem;">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="links" id="mapLinks"></div>
+
+    <div class="row-actions" style="margin-top:16px;">
+      <button type="button" id="addParcelBtn" disabled>+ Add This Parcel to Claim</button>
+      <span class="status" id="addStatus"></span>
+    </div>
+    <div class="status" style="margin-top:4px;">A claim can span more than one section — calculate each aliquot part above, then click "Add This Parcel to Claim" for each one. They'll all export together, labeled under one claim name, in the panel below.</div>
+
+    <details>
+      <summary>All four corners + center of this parcel</summary>
+      <table id="cornerTable">
+        <thead><tr><th>Point</th><th>Latitude</th><th>Longitude</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </details>
+
+    <details>
+      <summary>Raw BLM parcel record</summary>
+      <pre id="rawOut"></pre>
+    </details>
+
+    <div class="note" id="resultNote"></div>
+  </div>
+
+  <div class="panel" id="claimPanel" style="display:none;">
+    <h2>Claim Parcels &amp; Export <span id="claimCount" style="color:var(--ink-soft);font-weight:400;text-transform:none;letter-spacing:normal;"></span></h2>
+    <table id="claimTable">
+      <thead><tr><th>#</th><th>Parcel</th><th>Selected Point</th><th>Acres</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="status" id="claimEmptyHint" style="display:none;">No parcels added to the list yet &mdash; exporting now will use just your most recent calculation. Click "+ Add This Parcel to Claim" above if this claim spans more than one section.</div>
+    <div class="row-actions" style="margin-top:14px;">
+      <button type="button" id="exportGpxBtn">Export GPX (Gaia GPS)</button>
+      <button type="button" id="exportKmlBtn" class="secondary">Export KML (Google Earth)</button>
+      <button type="button" id="clearClaimBtn" class="secondary">Clear List</button>
+      <span class="status" id="exportStatus"></span>
+    </div>
+    <div class="status" style="margin-top:4px;">Exports combine every parcel listed above into one file &mdash; all corners, centers, and surveyed boundaries for each section, labeled with the claim name and each parcel's section/quarter. GPX imports directly into Gaia GPS; KML opens directly in Google Earth and also imports into Gaia GPS. In Chrome/Edge, a Save As dialog lets you pick the folder and filename; other browsers save straight to your Downloads folder.</div>
+  </div>
+
+  <div class="panel">
+    <h2>How this works &amp; accuracy notes</h2>
+    <div class="note" style="margin-top:0;">
+      <p style="margin:0 0 8px;"><strong>Data source.</strong> Coordinates come live from the BLM's official <em>PLSS CadNSDI</em> survey database (the same authoritative dataset used by BLM's own PLSS web viewer), not from idealized 1-mile-square section math. Real sections are irregular &mdash; convergence, historical survey error, and terrain closures mean corners rarely fall exactly where simple geometry would predict. This tool queries the actual surveyed/GCDB boundary for your aliquot part and reads real corner vertices from it.</p>
+      <p style="margin:0 0 8px;"><strong>Accuracy.</strong> BLM CadNSDI positional accuracy varies by county and survey vintage &mdash; typically better than a few meters in well-resurveyed areas, occasionally coarser in remote or older-survey areas. Coordinates are returned in the service's NAD83 datum reprojected to WGS84 (EPSG:4326); NAD83 and current WGS84 can differ by roughly 1&ndash;2 meters in California due to tectonic drift, which is usually within your target tolerance but worth knowing if you're cross-checking against a handheld GPS.</p>
+      <p style="margin:0;"><strong>Scope.</strong> Currently covers California's three principal meridians (Humboldt, Mount Diablo, San Bernardino). Fractional/duplicate townships near meridian and baseline lines aren't handled by this simple form. This locates <em>aliquot-part</em> corners (quarter and quarter-quarter sections); Government Lots and metes-and-bounds parcels along rivers/shorelines aren't aliquot parts and won't be found by this tool &mdash; if your section is lotted, the error message will say so.</p>
+    </div>
+  </div>
+
+  <footer>Data: BLM Cadastral Survey PLSS CadNSDI (gis.blm.gov), queried live &middot; Not a substitute for a licensed survey.</footer>
+</div>
+
+<script>
+const SERVICE_URL = 'https://gis.blm.gov/arcgis/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer/3/query';
+const MERIDIAN_NAMES = { '15': 'Humboldt Meridian', '21': 'Mount Diablo Meridian', '27': 'San Bernardino Meridian' };
+const MERIDIAN_ABBR = { '15': 'HM', '21': 'MDM', '27': 'SBM' };
+let lastResult = null;
+let claimParcels = [];
+
+function openReadme() {
+  document.getElementById('readmeModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeReadme() {
+  document.getElementById('readmeModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('readmeBtn').addEventListener('click', openReadme);
+document.getElementById('readmeCloseBtn').addEventListener('click', closeReadme);
+document.getElementById('readmeModal').addEventListener('click', (e) => {
+  if (e.target.id === 'readmeModal') closeReadme();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('readmeModal').classList.contains('open')) closeReadme();
+});
+
+function sanitizeFilename(s) {
+  return (s || 'PLSS_Claim').trim().replace(/[^a-z0-9\-_ ]/gi, '').replace(/\s+/g, '_').slice(0, 60) || 'PLSS_Claim';
+}
+
+function xmlEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function htmlEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Named points for a single parcel (lat/lon order); ring points are the actual
+// surveyed boundary (already closed, first==last).
+function parcelPointList(r, claimName, tag) {
+  return [
+    { label: `${claimName}${tag} - ${r.selected.label} (selected)`, lat: r.selected.latlon[0], lon: r.selected.latlon[1] },
+    { label: `${claimName}${tag} - Center`, lat: r.center[0], lon: r.center[1] },
+    { label: `${claimName}${tag} - NE Corner`, lat: r.corners.ne[0], lon: r.corners.ne[1] },
+    { label: `${claimName}${tag} - NW Corner`, lat: r.corners.nw[0], lon: r.corners.nw[1] },
+    { label: `${claimName}${tag} - SE Corner`, lat: r.corners.se[0], lon: r.corners.se[1] },
+    { label: `${claimName}${tag} - SW Corner`, lat: r.corners.sw[0], lon: r.corners.sw[1] },
+  ];
+}
+
+function parcelTag(parcels, i) {
+  return parcels.length > 1 ? ` [${i + 1}: ${parcels[i].parcelLabel}]` : '';
+}
+
+// Combines one or more aliquot-part parcels (a claim spanning multiple sections)
+// into a single GPX with every parcel's points and boundary track, all under one claim name.
+function buildGPX(parcels, claimName) {
+  let wpts = '', trks = '';
+  parcels.forEach((r, i) => {
+    const tag = parcelTag(parcels, i);
+    const pts = parcelPointList(r, claimName, tag);
+    wpts += pts.map(p =>
+      `  <wpt lat="${p.lat}" lon="${p.lon}"><name>${xmlEsc(p.label)}</name><desc>${xmlEsc(r.descText)}</desc></wpt>\n`
+    ).join('');
+    const trkpts = r.ring.map(([lon, lat]) => `      <trkpt lat="${lat}" lon="${lon}"></trkpt>`).join('\n');
+    trks += `  <trk>
+    <name>${xmlEsc(claimName + tag + ' - Parcel Boundary')}</name>
+    <desc>${xmlEsc(r.descText)}</desc>
+    <trkseg>
+${trkpts}
+    </trkseg>
+  </trk>
+`;
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Aliquot Parts to GPS Calculator" xmlns="http://www.topografix.com/GPX/1/1">
+${wpts}${trks}</gpx>`;
+}
+
+// Same idea for KML: one Folder per parcel (when there's more than one), each with its
+// point placemarks and a boundary polygon, all inside one Document named for the claim.
+function buildKML(parcels, claimName) {
+  let body = '';
+  parcels.forEach((r, i) => {
+    const tag = parcelTag(parcels, i);
+    const pts = parcelPointList(r, claimName, tag);
+    const placemarks = pts.map(p => `      <Placemark>
+        <name>${xmlEsc(p.label)}</name>
+        <description>${xmlEsc(r.descText)}</description>
+        <Point><coordinates>${p.lon},${p.lat},0</coordinates></Point>
+      </Placemark>`).join('\n');
+    const coordsStr = r.ring.map(([lon, lat]) => `${lon},${lat},0`).join(' ');
+    const folderName = parcels.length > 1 ? `${claimName}${tag}` : claimName;
+    body += `    <Folder>
+      <name>${xmlEsc(folderName)}</name>
+      <Placemark>
+        <name>${xmlEsc(claimName + tag + ' - Parcel Boundary')}</name>
+        <description>${xmlEsc(r.descText)}</description>
+        <Style>
+          <LineStyle><color>ff0033cc</color><width>3</width></LineStyle>
+          <PolyStyle><color>4d0033cc</color><fill>1</fill><outline>1</outline></PolyStyle>
+        </Style>
+        <Polygon>
+          <tessellate>1</tessellate>
+          <altitudeMode>clampToGround</altitudeMode>
+          <outerBoundaryIs><LinearRing><coordinates>${coordsStr}</coordinates></LinearRing></outerBoundaryIs>
+        </Polygon>
+      </Placemark>
+${placemarks}
+    </Folder>
+`;
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${xmlEsc(claimName)}</name>
+${body}  </Document>
+</kml>`;
+}
+
+// Returns 'saved' if written via a chosen location, 'downloaded' if it went through the
+// browser's normal download flow, or 'cancelled' if the user backed out of the save dialog.
+async function downloadFile(filename, content, mime) {
+  const ext = filename.slice(filename.lastIndexOf('.'));
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: ext.slice(1).toUpperCase() + ' file', accept: { [mime]: [ext] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      return 'saved';
+    } catch (err) {
+      if (err && err.name === 'AbortError') return 'cancelled';
+      // Any other error (e.g. picker unsupported in this context) — fall through to a plain download.
+    }
+  }
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return 'downloaded';
+}
+
+function pad(n, len) { return String(parseInt(n, 10)).padStart(len, '0'); }
+
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'plssCb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => { cleanup(); reject(new Error('JSONP request timed out.')); }, 12000);
+    function cleanup() {
+      delete window[cbName];
+      script.remove();
+      clearTimeout(timer);
+    }
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('JSONP <script> tag failed to load.')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
+
+async function fetchJson(url, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal, mode: 'cors' });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function buildWhere(base, extra) {
+  const clauses = [
+    `STATEABBR='CA'`,
+    `PRINMERCD='${base.prinmercd}'`,
+    `TWNSHPNO='${pad(base.twp, 3)}'`,
+    `TWNSHPDIR='${base.twpdir}'`,
+    `RANGENO='${pad(base.rng, 3)}'`,
+    `RANGEDIR='${base.rngdir}'`,
+    `FRSTDIVNO='${pad(base.section, 2)}'`,
+  ];
+  if (extra) clauses.push(...extra);
+  return clauses.join(' AND ');
+}
+
+async function runQuery(where) {
+  const url = `${SERVICE_URL}?f=json&outSR=4326&outFields=*&where=${encodeURIComponent(where)}`;
+  let data, fetchErr, jsonpErr;
+  try {
+    data = await fetchJson(url, 8000);
+  } catch (e) {
+    fetchErr = e;
+    try {
+      data = await jsonp(url);
+    } catch (e2) {
+      jsonpErr = e2;
+    }
+  }
+  if (!data) {
+    throw new Error(
+      'Could not reach the BLM PLSS service by either method ' +
+      `(direct request: ${fetchErr ? fetchErr.message : 'n/a'}; JSONP: ${jsonpErr ? jsonpErr.message : 'n/a'}). ` +
+      'If you are viewing this inside an embedded preview or artifact panel, that sandbox likely blocks outside network requests — ' +
+      'save/open the standalone HTML file directly in a regular browser tab instead, then try again.'
+    );
+  }
+  if (data.error) throw new Error(data.error.message || 'BLM service returned an error.');
+  return data;
+}
+
+// Try the aliquot-part query under a few plausible label orderings ("QQ+Q" and "Q+QQ",
+// each optionally prefixed with a half like "S2"), with and without the SECDIVTYP='A'
+// filter, since real-world data can be inconsistent. "half" follows the standard PLSS
+// shorthand (N/S/E/W + "2" for half, e.g. "S2NWNE" = S½ NW¼ NE¼), matching how BLM
+// itself labels half-of-aliquot parcels and how claim descriptions are usually written
+// (e.g. "S2, NW4, NE4, Section 10" = S½ NW¼ NE¼ Sec 10).
+async function findParcel(base, quarter, qtrqtr, half) {
+  const unprefixed = qtrqtr ? [qtrqtr + quarter, quarter + qtrqtr] : [quarter];
+  const halfCode = half ? half + '2' : '';
+  const labelCandidates = half ? unprefixed.map(b => halfCode + b) : unprefixed;
+  for (const requireA of [true, false]) {
+    for (const lab of labelCandidates) {
+      const extra = [`SECDIVLAB='${lab}'`];
+      if (requireA) extra.push(`SECDIVTYP='A'`);
+      const where = buildWhere(base, extra);
+      const data = await runQuery(where);
+      if (data.features && data.features.length) return { data, labelUsed: lab, where };
+    }
+  }
+  return null;
+}
+
+async function listAvailable(base) {
+  const where = buildWhere(base, null);
+  const data = await runQuery(where);
+  return data.features || [];
+}
+
+function ringArea(ring) {
+  let a = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i], [x2, y2] = ring[i + 1];
+    a += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(a) / 2;
+}
+
+function ringCentroid(ring) {
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i], [x2, y2] = ring[i + 1];
+    const cross = x1 * y2 - x2 * y1;
+    a += cross;
+    cx += (x1 + x2) * cross;
+    cy += (y1 + y2) * cross;
+  }
+  a /= 2;
+  if (Math.abs(a) < 1e-12) {
+    // degenerate ring, fall back to vertex average
+    let sx = 0, sy = 0;
+    for (const [x, y] of ring) { sx += x; sy += y; }
+    return [sx / ring.length, sy / ring.length];
+  }
+  return [cx / (6 * a), cy / (6 * a)];
+}
+
+function extremeCorners(ring) {
+  let ne = ring[0], nw = ring[0], se = ring[0], sw = ring[0];
+  let sNE = -Infinity, sNW = -Infinity, sSE = -Infinity, sSW = -Infinity;
+  for (const pt of ring) {
+    const [lon, lat] = pt;
+    if (lon + lat > sNE) { sNE = lon + lat; ne = pt; }
+    if (lat - lon > sNW) { sNW = lat - lon; nw = pt; }
+    if (lon - lat > sSE) { sSE = lon - lat; se = pt; }
+    if (-(lon + lat) > sSW) { sSW = -(lon + lat); sw = pt; }
+  }
+  return { ne, nw, se, sw };
+}
+
+// Halves of an aliquot part (e.g. S½ of a quarter-quarter) are almost never mapped as
+// their own polygon in BLM's PLSS CadNSDI — a 20-acre half isn't independently
+// monumented, it's legally defined by protraction: a straight line connecting the
+// midpoints of the parent parcel's opposite sides (BLM Manual of Surveying
+// Instructions). So when the exact halved label isn't found, we fetch the parent
+// (un-halved) parcel's real surveyed corners and compute the half the same way BLM
+// itself instructs surveyors to.
+function midpoint(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
+
+function computeHalfRing(corners, half) {
+  const { ne, nw, se, sw } = corners;
+  const midNorth = midpoint(nw, ne);
+  const midSouth = midpoint(sw, se);
+  const midEast = midpoint(ne, se);
+  const midWest = midpoint(nw, sw);
+  switch (half) {
+    case 'N': return [nw, ne, midEast, midWest, nw];
+    case 'S': return [midWest, midEast, se, sw, midWest];
+    case 'E': return [midNorth, ne, se, midSouth, midNorth];
+    case 'W': return [nw, midNorth, midSouth, sw, nw];
+    default: return null;
+  }
+}
+
+function pickPrimaryRing(rings) {
+  let best = rings[0], bestArea = ringArea(rings[0]);
+  for (const r of rings) {
+    const a = ringArea(r);
+    if (a > bestArea) { best = r; bestArea = a; }
+  }
+  return { ring: best, count: rings.length };
+}
+
+function toDMS(deg, isLat) {
+  const dir = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const mFull = (abs - d) * 60;
+  const m = Math.floor(mFull);
+  const s = ((mFull - m) * 60).toFixed(2);
+  return `${d}° ${m}' ${s}" ${dir}`;
+}
+
+function fmt(n) { return n.toFixed(7); }
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+// --- Free-text legal description parser ---
+// Handles things like "S2, NW4, NE4, Section 10, Township 18N, Range 11E, MDM",
+// "NE¼ SE¼ Sec 2, T19S R12E, Mount Diablo Meridian", or BLM's own concatenated
+// SECDIVLAB style ("S2NWNE"), spaced or comma-separated, with or without "4"/¼
+// suffixes on quarter codes.
+function normalizeDescription(text) {
+  return text.toUpperCase().replace(/½/g, '2').replace(/¼/g, '4').replace(/[.]/g, '').trim();
+}
+
+function parseDescription(raw) {
+  const norm = normalizeDescription(raw);
+  const errors = [];
+
+  const secMatch = norm.match(/\bSEC(?:TION)?\s*(\d{1,2})\b/);
+  if (!secMatch) errors.push('Could not find a Section number (expected something like "Section 10" or "Sec 10").');
+  const section = secMatch ? parseInt(secMatch[1], 10) : null;
+
+  const twpMatch = norm.match(/\bT(?:OWNSHIP)?\s*(\d{1,3})\s*(N(?:ORTH)?|S(?:OUTH)?)\b/);
+  if (!twpMatch) errors.push('Could not find a Township (expected something like "T18N" or "Township 18 North").');
+  const twp = twpMatch ? parseInt(twpMatch[1], 10) : null;
+  const twpdir = twpMatch ? twpMatch[2][0] : null;
+
+  const rngMatch = norm.match(/\bR(?:ANGE)?\s*(\d{1,3})\s*(E(?:AST)?|W(?:EST)?)\b/);
+  if (!rngMatch) errors.push('Could not find a Range (expected something like "R11E" or "Range 11 East").');
+  const rng = rngMatch ? parseInt(rngMatch[1], 10) : null;
+  const rngdir = rngMatch ? rngMatch[2][0] : null;
+
+  let meridian = null;
+  if (/MOUNT\s*DIABLO|MT\s*DIABLO|\bMDM\b|\bM\s*D\s*M\b/.test(norm)) meridian = '21';
+  else if (/HUMBOLDT|\bHM\b/.test(norm)) meridian = '15';
+  else if (/SAN\s*BERNARDINO|\bSBM\b/.test(norm)) meridian = '27';
+  if (!meridian) errors.push('Could not identify the Meridian (Humboldt/HM, Mount Diablo/MDM, or San Bernardino/SBM).');
+
+  let aliquot = null;
+  if (secMatch) {
+    const segment = norm.slice(0, secMatch.index);
+    const collapsed = segment.replace(/[^A-Z0-9]/g, '');
+    const m = collapsed.match(/^(?:([NSEW])2)?((?:NE|NW|SE|SW)4?)((?:NE|NW|SE|SW)4?)?$/);
+    if (m) {
+      aliquot = {
+        half: m[1] || '',
+        qtrqtr: m[3] ? m[2].replace('4', '') : '',
+        quarter: (m[3] || m[2]).replace('4', ''),
+      };
+    } else {
+      errors.push(`Could not parse the aliquot part ("${segment.trim()}") — expected something like "S2, NW4, NE4" or "NE¼ SE¼".`);
+    }
+  }
+
+  return { section, twp, twpdir, rng, rngdir, meridian, aliquot, errors };
+}
+
+document.getElementById('parseDescBtn').addEventListener('click', () => {
+  const raw = document.getElementById('descInput').value.trim();
+  const statusEl = document.getElementById('parseStatus');
+  if (!raw) {
+    statusEl.textContent = 'Paste a description first.';
+    statusEl.className = 'status err';
+    return;
+  }
+  const parsed = parseDescription(raw);
+
+  if (parsed.meridian) document.getElementById('meridian').value = parsed.meridian;
+  if (parsed.twp != null) document.getElementById('twp').value = parsed.twp;
+  if (parsed.twpdir) document.getElementById('twpdir').value = parsed.twpdir;
+  if (parsed.rng != null) document.getElementById('rng').value = parsed.rng;
+  if (parsed.rngdir) document.getElementById('rngdir').value = parsed.rngdir;
+  if (parsed.section != null) document.getElementById('section').value = parsed.section;
+  if (parsed.aliquot) {
+    document.getElementById('half').value = parsed.aliquot.half || '';
+    document.getElementById('qtrqtr').value = parsed.aliquot.qtrqtr || '';
+    document.getElementById('quarter').value = parsed.aliquot.quarter || '';
+  }
+
+  if (parsed.errors.length) {
+    statusEl.textContent = 'Filled in what I could parse, but: ' + parsed.errors.join(' ') + ' Please check/fill the rest manually below.';
+    statusEl.className = 'status err';
+  } else {
+    statusEl.textContent = 'Parsed — calculating…';
+    statusEl.className = 'status ok';
+    document.getElementById('plssForm').requestSubmit();
+  }
+});
+
+document.getElementById('exampleBtn').addEventListener('click', () => {
+  document.getElementById('meridian').value = '21';
+  document.getElementById('twp').value = 19;
+  document.getElementById('twpdir').value = 'S';
+  document.getElementById('rng').value = 12;
+  document.getElementById('rngdir').value = 'E';
+  document.getElementById('section').value = 2;
+  document.getElementById('quarter').value = 'SE';
+  document.getElementById('qtrqtr').value = 'NE';
+  document.getElementById('corner').value = 'se';
+  if (!document.getElementById('claimName').value.trim()) {
+    document.getElementById('claimName').value = 'Lucky Strike #1';
+  }
+  setStatus('Example loaded: NE¼ SE¼ Sec 2, T19S R12E MDM.', 'ok');
+});
+
+function getExportClaimName() {
+  return document.getElementById('claimName').value.trim() || 'PLSS_Claim';
+}
+
+// Multi-section claims: export whatever's been added to the claim list; if nothing has
+// been added yet, fall back to exporting just the most recently calculated parcel.
+function getParcelsForExport() {
+  if (claimParcels.length) return claimParcels;
+  if (lastResult) return [lastResult];
+  return [];
+}
+
+function renderClaimList() {
+  const panel = document.getElementById('claimPanel');
+  const tbody = document.querySelector('#claimTable tbody');
+  const table = document.getElementById('claimTable');
+  const emptyHint = document.getElementById('claimEmptyHint');
+  tbody.innerHTML = '';
+  claimParcels.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i + 1}</td><td>${htmlEsc(p.parcelLabel)}</td><td>${htmlEsc(p.selected.label)}</td><td class="mono">${p.acres.toFixed(2)}</td>` +
+      `<td><button type="button" class="secondary removeParcelBtn" data-id="${p._id}" style="padding:3px 8px;font-size:.78rem;">Remove</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('claimCount').textContent = claimParcels.length ? `(${claimParcels.length})` : '';
+  // Show the export panel (and its buttons) as soon as there's anything exportable —
+  // either an added claim list, or just the most recent calculation — not only once
+  // something's been explicitly added to the list.
+  const hasAnything = claimParcels.length > 0 || !!lastResult;
+  panel.style.display = hasAnything ? 'block' : 'none';
+  table.style.display = claimParcels.length ? 'table' : 'none';
+  emptyHint.style.display = (hasAnything && !claimParcels.length) ? 'block' : 'none';
+}
+
+document.getElementById('addParcelBtn').addEventListener('click', () => {
+  if (!lastResult) return;
+  claimParcels.push({ ...lastResult, _id: Date.now() + '_' + Math.random().toString(36).slice(2) });
+  renderClaimList();
+  document.getElementById('addStatus').textContent = `Added "${lastResult.parcelLabel}" to the claim list below.`;
+  document.getElementById('addStatus').className = 'status ok';
+});
+
+document.querySelector('#claimTable tbody').addEventListener('click', (e) => {
+  if (e.target.classList.contains('removeParcelBtn')) {
+    const id = e.target.getAttribute('data-id');
+    claimParcels = claimParcels.filter(p => p._id !== id);
+    renderClaimList();
+  }
+});
+
+document.getElementById('clearClaimBtn').addEventListener('click', () => {
+  claimParcels = [];
+  renderClaimList();
+  document.getElementById('exportStatus').textContent = '';
+});
+
+function exportStatusMessage(result, kind, count, appHint) {
+  const n = `${count} parcel${count > 1 ? 's' : ''}`;
+  if (result === 'cancelled') return 'Export cancelled — nothing was saved.';
+  if (result === 'saved') return `${kind} saved (${n}). ${appHint}`;
+  return `${kind} downloaded (${n}) — check your browser's downloads folder. ${appHint}`;
+}
+
+document.getElementById('exportGpxBtn').addEventListener('click', async () => {
+  const parcels = getParcelsForExport();
+  if (!parcels.length) {
+    document.getElementById('exportStatus').textContent = 'Calculate a parcel first.';
+    return;
+  }
+  const claimName = getExportClaimName();
+  const result = await downloadFile(sanitizeFilename(claimName) + '.gpx', buildGPX(parcels, claimName), 'application/gpx+xml');
+  document.getElementById('exportStatus').textContent =
+    exportStatusMessage(result, 'GPX', parcels.length, 'Import it into Gaia GPS via Saved > Import, or drag-and-drop.');
+});
+
+document.getElementById('exportKmlBtn').addEventListener('click', async () => {
+  const parcels = getParcelsForExport();
+  if (!parcels.length) {
+    document.getElementById('exportStatus').textContent = 'Calculate a parcel first.';
+    return;
+  }
+  const claimName = getExportClaimName();
+  const result = await downloadFile(sanitizeFilename(claimName) + '.kml', buildKML(parcels, claimName), 'application/vnd.google-earth.kml+xml');
+  document.getElementById('exportStatus').textContent =
+    exportStatusMessage(result, 'KML', parcels.length, 'Double-click it to open in Google Earth, or import into Gaia GPS.');
+});
+
+document.getElementById('plssForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  lastResult = null;
+  document.getElementById('addParcelBtn').disabled = true;
+  document.getElementById('addStatus').textContent = '';
+  const calcBtn = document.getElementById('calcBtn');
+  calcBtn.disabled = true;
+  document.getElementById('results').style.display = 'none';
+  setStatus('Querying BLM PLSS database…');
+
+  const base = {
+    prinmercd: document.getElementById('meridian').value,
+    twp: document.getElementById('twp').value,
+    twpdir: document.getElementById('twpdir').value,
+    rng: document.getElementById('rng').value,
+    rngdir: document.getElementById('rngdir').value,
+    section: document.getElementById('section').value,
+  };
+  const quarter = document.getElementById('quarter').value;
+  const qtrqtr = document.getElementById('qtrqtr').value;
+  const half = document.getElementById('half').value;
+  const cornerChoice = document.getElementById('corner').value;
+
+  try {
+    // Try the exact halved label first (rare, but some areas do have it mapped);
+    // if that's not found and a half was requested, fall back to the parent
+    // (un-halved) parcel and compute the half by protraction below.
+    let found = await findParcel(base, quarter, qtrqtr, half);
+    let computedHalf = false;
+    if (!found && half) {
+      found = await findParcel(base, quarter, qtrqtr, '');
+      computedHalf = !!found;
+    }
+    if (!found) {
+      let extraMsg = '';
+      try {
+        const avail = await listAvailable(base);
+        if (avail.length) {
+          const labels = [...new Set(avail.map(f => f.attributes.SECDIVLAB || (f.attributes.GOVLOT ? 'Lot ' + f.attributes.GOVLOT : null)).filter(Boolean))];
+          extraMsg = ' This section does have PLSS subdivisions on record: ' + labels.join(', ') + '. If you see "Lot" entries, this is a lotted/metes-and-bounds section rather than a plain aliquot part — this tool doesn’t handle those yet.';
+        } else {
+          extraMsg = ' No PLSS records at all were found for that Township/Range/Section — double check the meridian, township/range numbers and directions.';
+        }
+      } catch (e) { /* best effort */ }
+      setStatus('No aliquot-part parcel found for that description.' + extraMsg, 'err');
+      calcBtn.disabled = false;
+      return;
+    }
+
+    const { data, labelUsed } = found;
+    const features = data.features;
+    let allRings = [];
+    let totalAcres = 0;
+    let sampleAttrs = features[0].attributes;
+    for (const f of features) {
+      if (f.geometry && f.geometry.rings) allRings.push(...f.geometry.rings);
+      if (typeof f.attributes.GISACRE === 'number') totalAcres += f.attributes.GISACRE;
+    }
+    if (!allRings.length) throw new Error('BLM returned a match but no boundary geometry.');
+
+    const { ring: parentRing, count: pieceCount } = pickPrimaryRing(allRings);
+    const parentCorners = extremeCorners(parentRing);
+
+    // If we fell back to the parent parcel, compute the requested half via
+    // protraction (midpoints of opposite sides) instead of using the parent's
+    // full boundary, and scale its acreage proportionally off BLM's real GISACRE
+    // for the parent (planar area ratio, valid at this scale).
+    let primaryRing = parentRing;
+    if (computedHalf) {
+      primaryRing = computeHalfRing(parentCorners, half);
+      const parentQuad = [parentCorners.nw, parentCorners.ne, parentCorners.se, parentCorners.sw, parentCorners.nw];
+      const ratio = ringArea(primaryRing) / ringArea(parentQuad);
+      totalAcres = totalAcres * ratio;
+    }
+    const corners = extremeCorners(primaryRing);
+    const [cLon, cLat] = ringCentroid(primaryRing);
+
+    const cornerMap = {
+      center: [cLat, cLon],
+      ne: [corners.ne[1], corners.ne[0]],
+      nw: [corners.nw[1], corners.nw[0]],
+      se: [corners.se[1], corners.se[0]],
+      sw: [corners.sw[1], corners.sw[0]],
+    };
+    const [lat, lon] = cornerMap[cornerChoice];
+
+    document.getElementById('latOut').textContent = fmt(lat) + '°';
+    document.getElementById('lonOut').textContent = fmt(lon) + '°';
+    document.getElementById('dmsOut').textContent = toDMS(lat, true) + '  ' + toDMS(lon, false);
+
+    const meridianName = MERIDIAN_NAMES[base.prinmercd] || base.prinmercd;
+    const qDescBase = qtrqtr ? `${qtrqtr}¼ ${quarter}¼` : `${quarter}¼`;
+    const qDesc = half ? `${half}½ ${qDescBase}` : qDescBase;
+    const cornerLabel = cornerChoice === 'center' ? 'Center' : cornerChoice.toUpperCase() + ' corner';
+    document.getElementById('descText').textContent =
+      `${cornerLabel} of ${qDesc} Section ${parseInt(base.section,10)}, T${base.twp}${base.twpdir} R${base.rng}${base.rngdir}, ${meridianName}`;
+
+    document.getElementById('acreBadge').textContent = totalAcres.toFixed(2) + (computedHalf ? ' acres (computed)' : ' GIS acres') + (pieceCount > 1 ? ` (${pieceCount} pieces, largest used for corners)` : '');
+
+    document.getElementById('mapLinks').innerHTML = `
+      <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener">Open in Google Maps</a>
+      <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}" target="_blank" rel="noopener">Open in OpenStreetMap</a>
+      <a href="#" id="copyLink">Copy "${lat.toFixed(7)}, ${lon.toFixed(7)}"</a>
+    `;
+    document.getElementById('copyLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(`${lat.toFixed(7)}, ${lon.toFixed(7)}`);
+      setStatus('Coordinates copied to clipboard.', 'ok');
+    });
+
+    const tbody = document.querySelector('#cornerTable tbody');
+    tbody.innerHTML = '';
+    const rows = [
+      ['NE corner', corners.ne[1], corners.ne[0]],
+      ['NW corner', corners.nw[1], corners.nw[0]],
+      ['SE corner', corners.se[1], corners.se[0]],
+      ['SW corner', corners.sw[1], corners.sw[0]],
+      ['Center', cLat, cLon],
+    ];
+    for (const [name, la, lo] of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${name}</td><td class="mono">${fmt(la)}</td><td class="mono">${fmt(lo)}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    const meridianAbbr = MERIDIAN_ABBR[base.prinmercd] || meridianName;
+    const parcelLabel = `Sec ${parseInt(base.section, 10)} ${qDesc}, T${base.twp}${base.twpdir} R${base.rng}${base.rngdir} ${meridianAbbr}`;
+
+    lastResult = {
+      descText: document.getElementById('descText').textContent,
+      parcelLabel,
+      acres: totalAcres,
+      corners: { ne: cornerMap.ne, nw: cornerMap.nw, se: cornerMap.se, sw: cornerMap.sw },
+      center: cornerMap.center,
+      selected: { label: cornerLabel, latlon: [lat, lon] },
+      ring: primaryRing,
+    };
+    document.getElementById('addParcelBtn').disabled = false;
+    renderClaimList();
+
+    document.getElementById('rawOut').textContent = JSON.stringify(sampleAttrs, null, 2);
+
+    const matchNote =
+      `Matched on <span class="mono">SECDIVLAB='${labelUsed}'</span> in BLM's PLSS Intersected layer &middot; ` +
+      `PLSSID <span class="mono">${sampleAttrs.PLSSID || 'n/a'}</span> &middot; ` +
+      `Steward: ${sampleAttrs.STEWARD || 'n/a'}.`;
+    const halfNote = computedHalf
+      ? ` <strong>Note:</strong> BLM doesn't map a separate ${half}½ polygon for this parcel — halves of aliquot parts usually aren't independently surveyed. This corner was computed from the real surveyed ${qDescBase} boundary above, split by protraction (a straight line connecting the midpoints of its opposite sides), which is the standard BLM/GLO method for locating halves. Acreage is a proportional estimate, not an official BLM figure.`
+      : '';
+    document.getElementById('resultNote').innerHTML = matchNote + halfNote;
+
+    document.getElementById('results').style.display = 'block';
+    setStatus('Done.', 'ok');
+  } catch (err) {
+    console.error(err);
+    setStatus('Error: ' + err.message, 'err');
+  } finally {
+    calcBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
