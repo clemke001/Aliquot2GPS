@@ -134,6 +134,14 @@
     cursor: pointer; white-space: nowrap;
   }
   .readme-btn:hover { background: #f0ece0; }
+  .flour-btn {
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    background: #f3e6bd; border-color: #c9a227; color: #6b5323;
+  }
+  .flour-btn:hover { background: #ecd99f; }
+  .header-support { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .header-support-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .flour-note { font-size: 0.72rem; color: var(--ink-soft); max-width: 230px; text-align: right; line-height: 1.4; }
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(28,35,33,0.55);
     z-index: 100; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto;
@@ -171,7 +179,15 @@
         <div class="sub">Enter a PLSS aliquot-part legal description (Meridian, Township, Range, Section, Quarter) and get the GPS coordinates of any corner of that parcel, pulled from BLM's official PLSS CadNSDI survey database &mdash; not idealized geometry.</div>
         <div class="sub" style="margin-top:6px;"><strong>States covered:</strong> CA / AZ / NV / OR / WA / ID / UT / MT / WY / CO / NM</div>
       </div>
-      <button type="button" class="readme-btn" id="readmeBtn">README</button>
+      <div class="header-support">
+        <div class="header-support-row">
+          <button type="button" class="readme-btn" id="readmeBtn">README</button>
+          <!-- Placeholder link — replace with your real Buy Me a Coffee page once it's set up,
+               e.g. https://www.buymeacoffee.com/yourusername -->
+          <a href="https://www.buymeacoffee.com/YOUR_USERNAME_HERE" target="_blank" rel="noopener" class="readme-btn flour-btn" id="flourBtn">&#127806; Add Some Flour</a>
+        </div>
+        <div class="flour-note">If you like this tool or want to support its development, please click the &ldquo;Add Some Flour&rdquo; button to donate.</div>
+      </div>
     </div>
   </header>
 
@@ -202,7 +218,7 @@
 
     <div class="field wide">
       <label for="descInput">Paste a Full Description (optional shortcut)</label>
-      <input type="text" id="descInput" placeholder='e.g. N2, NW4, NE4, Section 12, Township 19S, Range 12E, MDM' autocomplete="off">
+      <input type="text" id="descInput" placeholder='e.g. NE4, SE4, Section 2, Township 19S, Range 12E, MDM' autocomplete="off">
     </div>
     <div class="row-actions" style="margin-top:0;">
       <button type="button" class="secondary" id="parseDescBtn">Parse &amp; Fill Fields Below</button>
@@ -290,7 +306,7 @@
           </select>
         </div>
         <div class="field wide" style="margin-top:-6px;">
-          <span class="status">Read top to bottom in the same order as the description: e.g. "S2, NW4, NE4" = 1st Half S, 2nd Quarter-of-Quarter NW, 3rd Quarter of Section NE.</span>
+          <span class="status">Read top to bottom in the same order as the description: e.g. "N2, SW4, SE4" = 1st Half N, 2nd Quarter-of-Quarter SW, 3rd Quarter of Section SE.</span>
         </div>
         <div class="field">
           <label for="corner">Corner to Locate</label>
@@ -676,7 +692,7 @@ async function runQuery(where) {
 // filter, since real-world data can be inconsistent. "half" follows the standard PLSS
 // shorthand (N/S/E/W + "2" for half, e.g. "S2NWNE" = S½ NW¼ NE¼), matching how BLM
 // itself labels half-of-aliquot parcels and how claim descriptions are usually written
-// (e.g. "S2, NW4, NE4, Section 10" = S½ NW¼ NE¼ Sec 10).
+// (e.g. "N2, SW4, SE4, Section 2" = N½ SW¼ SE¼ Sec 2).
 async function findParcel(base, quarter, qtrqtr, half) {
   const unprefixed = qtrqtr ? [qtrqtr + quarter, quarter + qtrqtr] : [quarter];
   const halfCode = half ? half + '2' : '';
@@ -792,9 +808,9 @@ function setStatus(msg, cls) {
 }
 
 // --- Free-text legal description parser ---
-// Handles things like "S2, NW4, NE4, Section 10, Township 18N, Range 11E, MDM",
+// Handles things like "NE4, SE4, Section 2, Township 19S, Range 12E, MDM",
 // "NE¼ SE¼ Sec 2, T19S R12E, Mount Diablo Meridian", or BLM's own concatenated
-// SECDIVLAB style ("S2NWNE"), spaced or comma-separated, with or without "4"/¼
+// SECDIVLAB style ("NESE"), spaced or comma-separated, with or without "4"/¼
 // suffixes on quarter codes.
 function normalizeDescription(text) {
   return text.toUpperCase().replace(/½/g, '2').replace(/¼/g, '4').replace(/[.]/g, '').trim();
@@ -805,16 +821,16 @@ function parseDescription(raw) {
   const errors = [];
 
   const secMatch = norm.match(/\bSEC(?:TION)?\s*(\d{1,2})\b/);
-  if (!secMatch) errors.push('Could not find a Section number (expected something like "Section 10" or "Sec 10").');
+  if (!secMatch) errors.push('Could not find a Section number (expected something like "Section 2" or "Sec 2").');
   const section = secMatch ? parseInt(secMatch[1], 10) : null;
 
   const twpMatch = norm.match(/\bT(?:OWNSHIP)?\s*(\d{1,3})\s*(N(?:ORTH)?|S(?:OUTH)?)\b/);
-  if (!twpMatch) errors.push('Could not find a Township (expected something like "T18N" or "Township 18 North").');
+  if (!twpMatch) errors.push('Could not find a Township (expected something like "T19S" or "Township 19 South").');
   const twp = twpMatch ? parseInt(twpMatch[1], 10) : null;
   const twpdir = twpMatch ? twpMatch[2][0] : null;
 
   const rngMatch = norm.match(/\bR(?:ANGE)?\s*(\d{1,3})\s*(E(?:AST)?|W(?:EST)?)\b/);
-  if (!rngMatch) errors.push('Could not find a Range (expected something like "R11E" or "Range 11 East").');
+  if (!rngMatch) errors.push('Could not find a Range (expected something like "R12E" or "Range 12 East").');
   const rng = rngMatch ? parseInt(rngMatch[1], 10) : null;
   const rngdir = rngMatch ? rngMatch[2][0] : null;
 
@@ -843,7 +859,7 @@ function parseDescription(raw) {
         quarter: (m[3] || m[2]).replace('4', ''),
       };
     } else {
-      errors.push(`Could not parse the aliquot part ("${segment.trim()}") — expected something like "S2, NW4, NE4" or "NE¼ SE¼".`);
+      errors.push(`Could not parse the aliquot part ("${segment.trim()}") — expected something like "N2, SW4, SE4" or "NE¼ SE¼".`);
     }
   }
 
