@@ -98,9 +98,3 @@ mining claims or locating property boundaries.
 ## License
 
 Eclipse Public License - v 2.0 (EPL-2.0). SPDX-License-Identifier: `EPL-2.0`.
-
-Before publishing, add a `LICENSE` file to the repo containing the full
-EPL-2.0 text from the canonical source: https://www.eclipse.org/legal/epl-2.0/
-(a tool-level restriction on this session prevented reproducing the full
-legal text verbatim here, so copy it directly from that link rather than
-from this README).
