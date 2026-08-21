@@ -287,7 +287,17 @@
           </select>
         </div>
         <div class="field">
-          <label for="qtrqtr">2nd: Quarter of a Quarter (optional)</label>
+          <label for="qqq">2nd: Quarter of a Quarter of a Quarter (optional, rare &mdash; 10 ac)</label>
+          <select id="qqq">
+            <option value="" selected>&mdash; none &mdash;</option>
+            <option value="NE">NE &frac14;</option>
+            <option value="NW">NW &frac14;</option>
+            <option value="SE">SE &frac14;</option>
+            <option value="SW">SW &frac14;</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="qtrqtr">3rd: Quarter of a Quarter (optional)</label>
           <select id="qtrqtr">
             <option value="">&mdash; whole quarter (160 ac) &mdash;</option>
             <option value="NE" selected>NE &frac14;</option>
@@ -297,7 +307,7 @@
           </select>
         </div>
         <div class="field">
-          <label for="quarter">3rd: Quarter of Section (required)</label>
+          <label for="quarter">4th: Quarter of Section (required)</label>
           <select id="quarter">
             <option value="NE">NE &frac14;</option>
             <option value="NW">NW &frac14;</option>
@@ -306,7 +316,7 @@
           </select>
         </div>
         <div class="field wide" style="margin-top:-6px;">
-          <span class="status">Read top to bottom in the same order as the description: e.g. "N2, SW4, SE4" = 1st Half N, 2nd Quarter-of-Quarter SW, 3rd Quarter of Section SE.</span>
+          <span class="status">Read top to bottom in the same order as the description: e.g. "N2, SW4, SE4" = 1st Half N, 3rd Quarter-of-Quarter SW, 4th Quarter of Section SE. For a rare 10-acre split like "NW4, NE4, SW4" (quarter of a quarter of a quarter, no half), use the 2nd field for the finest NW&frac14;, 3rd for NE&frac14;, 4th for SW&frac14;.</span>
         </div>
         <div class="field">
           <label for="corner">Corner to Locate</label>
@@ -688,15 +698,18 @@ async function runQuery(where) {
 }
 
 // Try the aliquot-part query under a few plausible label orderings ("QQ+Q" and "Q+QQ",
-// each optionally prefixed with a half like "S2"), with and without the SECDIVTYP='A'
-// filter, since real-world data can be inconsistent. "half" follows the standard PLSS
-// shorthand (N/S/E/W + "2" for half, e.g. "S2NWNE" = S½ NW¼ NE¼), matching how BLM
-// itself labels half-of-aliquot parcels and how claim descriptions are usually written
-// (e.g. "N2, SW4, SE4, Section 2" = N½ SW¼ SE¼ Sec 2).
-async function findParcel(base, quarter, qtrqtr, half) {
-  const unprefixed = qtrqtr ? [qtrqtr + quarter, quarter + qtrqtr] : [quarter];
+// each optionally prefixed with a finer quarter-of-quarter-of-quarter code and/or a half
+// like "S2"), with and without the SECDIVTYP='A' filter, since real-world data can be
+// inconsistent. "half" follows the standard PLSS shorthand (N/S/E/W + "2" for half, e.g.
+// "S2NWNE" = S½ NW¼ NE¼), and "qqq" is the finest-first quarter-of-quarter-of-quarter code
+// (e.g. "NWNESW" = NW¼ NE¼ SW¼), matching how BLM itself labels aliquot parcels and how
+// claim descriptions are usually written (e.g. "N2, SW4, SE4, Section 2" = N½ SW¼ SE¼ Sec 2;
+// "NW4, NE4, SW4, Section 2" = NW¼ NE¼ SW¼ Sec 2).
+async function findParcel(base, quarter, qtrqtr, qqq, half) {
+  const qqBase = qtrqtr ? [qtrqtr + quarter, quarter + qtrqtr] : [quarter];
+  const withQqq = qqq ? qqBase.map(b => qqq + b) : qqBase;
   const halfCode = half ? half + '2' : '';
-  const labelCandidates = half ? unprefixed.map(b => halfCode + b) : unprefixed;
+  const labelCandidates = half ? withQqq.map(b => halfCode + b) : withQqq;
   for (const requireA of [true, false]) {
     for (const lab of labelCandidates) {
       const extra = [`SECDIVLAB='${lab}'`];
@@ -780,6 +793,29 @@ function computeHalfRing(corners, half) {
   }
 }
 
+// Same protraction principle, one level finer: a quarter of a quarter of a quarter (e.g.
+// NW¼ of a 40-acre quarter-quarter, 10 acres) isn't independently monumented either — it's
+// defined by connecting the midpoints of the parent's opposite sides in BOTH directions,
+// meeting at a center point, exactly like a standard section is quartered into its four
+// quarter-sections. Used when BLM doesn't map that finer subdivision as its own polygon.
+function computeQuarterRing(corners, dir) {
+  const { ne, nw, se, sw } = corners;
+  const midNorth = midpoint(nw, ne);
+  const midSouth = midpoint(sw, se);
+  const midEast = midpoint(ne, se);
+  const midWest = midpoint(nw, sw);
+  const center = midpoint(midNorth, midSouth);
+  switch (dir) {
+    case 'NW': return [nw, midNorth, center, midWest, nw];
+    case 'NE': return [midNorth, ne, midEast, center, midNorth];
+    case 'SE': return [center, midEast, se, midSouth, center];
+    case 'SW': return [midWest, center, midSouth, sw, midWest];
+    default: return null;
+  }
+}
+
+function quadFromCorners(c) { return [c.nw, c.ne, c.se, c.sw, c.nw]; }
+
 function pickPrimaryRing(rings) {
   let best = rings[0], bestArea = ringArea(rings[0]);
   for (const r of rings) {
@@ -847,16 +883,21 @@ function parseDescription(raw) {
     ambiguousStates = MERIDIAN_STATES[meridian];
   }
 
+  // Up to three quarter codes (quarter, quarter-of-quarter, quarter-of-quarter-of-quarter),
+  // written finest-first, optionally prefixed with a half — e.g. "NW4, NE4, SW4" (a rare
+  // 10-acre split, no half) or "S2, NW4, NE4" (a 20-acre half of a quarter-quarter).
   let aliquot = null;
   if (secMatch) {
     const segment = norm.slice(0, secMatch.index);
     const collapsed = segment.replace(/[^A-Z0-9]/g, '');
-    const m = collapsed.match(/^(?:([NSEW])2)?((?:NE|NW|SE|SW)4?)((?:NE|NW|SE|SW)4?)?$/);
+    const m = collapsed.match(/^(?:([NSEW])2)?((?:NE|NW|SE|SW)4?)((?:NE|NW|SE|SW)4?)?((?:NE|NW|SE|SW)4?)?$/);
     if (m) {
+      const groups = [m[2], m[3], m[4]].filter(Boolean).map(g => g.replace('4', ''));
       aliquot = {
         half: m[1] || '',
-        qtrqtr: m[3] ? m[2].replace('4', '') : '',
-        quarter: (m[3] || m[2]).replace('4', ''),
+        qqq: groups.length >= 3 ? groups[groups.length - 3] : '',
+        qtrqtr: groups.length >= 2 ? groups[groups.length - 2] : '',
+        quarter: groups[groups.length - 1],
       };
     } else {
       errors.push(`Could not parse the aliquot part ("${segment.trim()}") — expected something like "N2, SW4, SE4" or "NE¼ SE¼".`);
@@ -896,6 +937,7 @@ document.getElementById('parseDescBtn').addEventListener('click', () => {
   if (parsed.section != null) document.getElementById('section').value = parsed.section;
   if (parsed.aliquot) {
     document.getElementById('half').value = parsed.aliquot.half || '';
+    document.getElementById('qqq').value = parsed.aliquot.qqq || '';
     document.getElementById('qtrqtr').value = parsed.aliquot.qtrqtr || '';
     document.getElementById('quarter').value = parsed.aliquot.quarter || '';
   }
@@ -924,6 +966,8 @@ document.getElementById('exampleBtn').addEventListener('click', () => {
   document.getElementById('section').value = 2;
   document.getElementById('quarter').value = 'SE';
   document.getElementById('qtrqtr').value = 'NE';
+  document.getElementById('qqq').value = '';
+  document.getElementById('half').value = '';
   document.getElementById('corner').value = 'se';
   if (!document.getElementById('claimName').value.trim()) {
     document.getElementById('claimName').value = 'Lucky Strike #1';
@@ -1039,18 +1083,26 @@ document.getElementById('plssForm').addEventListener('submit', async (ev) => {
   };
   const quarter = document.getElementById('quarter').value;
   const qtrqtr = document.getElementById('qtrqtr').value;
+  const qqq = document.getElementById('qqq').value;
   const half = document.getElementById('half').value;
   const cornerChoice = document.getElementById('corner').value;
 
   try {
-    // Try the exact halved label first (rare, but some areas do have it mapped);
-    // if that's not found and a half was requested, fall back to the parent
-    // (un-halved) parcel and compute the half by protraction below.
-    let found = await findParcel(base, quarter, qtrqtr, half);
-    let computedHalf = false;
-    if (!found && half) {
-      found = await findParcel(base, quarter, qtrqtr, '');
-      computedHalf = !!found;
+    // Try the exact finest label first (rare, but some areas do have it mapped);
+    // if that's not found, progressively fall back toward the nearest coarser
+    // parcel BLM does map (almost always the 40-acre quarter-quarter), and
+    // compute whatever finer levels were requested (qqq and/or half) ourselves
+    // by protraction below.
+    let found = await findParcel(base, quarter, qtrqtr, qqq, half);
+    let computedQqq = false, computedHalf = false;
+    if (!found && half && qqq) {
+      // Maybe the quarter-of-quarter-of-quarter is mapped even though the half isn't.
+      found = await findParcel(base, quarter, qtrqtr, qqq, '');
+      if (found) computedHalf = true;
+    }
+    if (!found && (qqq || half)) {
+      found = await findParcel(base, quarter, qtrqtr, '', '');
+      if (found) { computedQqq = !!qqq; computedHalf = !!half; }
     }
     if (!found) {
       let extraMsg = '';
@@ -1080,18 +1132,26 @@ document.getElementById('plssForm').addEventListener('submit', async (ev) => {
     if (!allRings.length) throw new Error('BLM returned a match but no boundary geometry.');
 
     const { ring: parentRing, count: pieceCount } = pickPrimaryRing(allRings);
-    const parentCorners = extremeCorners(parentRing);
 
-    // If we fell back to the parent parcel, compute the requested half via
-    // protraction (midpoints of opposite sides) instead of using the parent's
-    // full boundary, and scale its acreage proportionally off BLM's real GISACRE
-    // for the parent (planar area ratio, valid at this scale).
+    // If we fell back to a coarser parcel, compute whatever finer levels were
+    // requested (quarter-of-quarter-of-quarter, then half) via protraction —
+    // midpoints of opposite sides, the standard BLM/GLO method — instead of
+    // using the parent's full boundary, scaling acreage proportionally off
+    // BLM's real GISACRE for the parent (planar area ratio, valid at this scale).
     let primaryRing = parentRing;
-    if (computedHalf) {
-      primaryRing = computeHalfRing(parentCorners, half);
-      const parentQuad = [parentCorners.nw, parentCorners.ne, parentCorners.se, parentCorners.sw, parentCorners.nw];
-      const ratio = ringArea(primaryRing) / ringArea(parentQuad);
+    if (computedQqq) {
+      const c = extremeCorners(primaryRing);
+      const quarterRing = computeQuarterRing(c, qqq);
+      const ratio = ringArea(quarterRing) / ringArea(quadFromCorners(c));
       totalAcres = totalAcres * ratio;
+      primaryRing = quarterRing;
+    }
+    if (computedHalf) {
+      const c = extremeCorners(primaryRing);
+      const halfRing = computeHalfRing(c, half);
+      const ratio = ringArea(halfRing) / ringArea(quadFromCorners(c));
+      totalAcres = totalAcres * ratio;
+      primaryRing = halfRing;
     }
     const corners = extremeCorners(primaryRing);
     const [cLon, cLat] = ringCentroid(primaryRing);
@@ -1110,13 +1170,14 @@ document.getElementById('plssForm').addEventListener('submit', async (ev) => {
     document.getElementById('dmsOut').textContent = toDMS(lat, true) + '  ' + toDMS(lon, false);
 
     const meridianName = MERIDIAN_NAMES[base.prinmercd] || base.prinmercd;
-    const qDescBase = qtrqtr ? `${qtrqtr}¼ ${quarter}¼` : `${quarter}¼`;
-    const qDesc = half ? `${half}½ ${qDescBase}` : qDescBase;
+    let qDescParent = qtrqtr ? `${qtrqtr}¼ ${quarter}¼` : `${quarter}¼`;
+    const qDescQqq = qqq ? `${qqq}¼ ${qDescParent}` : qDescParent;
+    const qDesc = half ? `${half}½ ${qDescQqq}` : qDescQqq;
     const cornerLabel = cornerChoice === 'center' ? 'Center' : cornerChoice.toUpperCase() + ' corner';
     document.getElementById('descText').textContent =
       `${cornerLabel} of ${qDesc} Section ${parseInt(base.section,10)}, T${base.twp}${base.twpdir} R${base.rng}${base.rngdir}, ${meridianName}, ${STATE_NAMES[base.stateabbr] || base.stateabbr}`;
 
-    document.getElementById('acreBadge').textContent = totalAcres.toFixed(2) + (computedHalf ? ' acres (computed)' : ' GIS acres') + (pieceCount > 1 ? ` (${pieceCount} pieces, largest used for corners)` : '');
+    document.getElementById('acreBadge').textContent = totalAcres.toFixed(2) + ((computedHalf || computedQqq) ? ' acres (computed)' : ' GIS acres') + (pieceCount > 1 ? ` (${pieceCount} pieces, largest used for corners)` : '');
 
     document.getElementById('mapLinks').innerHTML = `
       <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener">Open in Google Maps</a>
@@ -1165,10 +1226,14 @@ document.getElementById('plssForm').addEventListener('submit', async (ev) => {
       `Matched on <span class="mono">SECDIVLAB='${labelUsed}'</span> in BLM's PLSS Intersected layer &middot; ` +
       `PLSSID <span class="mono">${sampleAttrs.PLSSID || 'n/a'}</span> &middot; ` +
       `Steward: ${sampleAttrs.STEWARD || 'n/a'}.`;
-    const halfNote = computedHalf
-      ? ` <strong>Note:</strong> BLM doesn't map a separate ${half}½ polygon for this parcel — halves of aliquot parts usually aren't independently surveyed. This corner was computed from the real surveyed ${qDescBase} boundary above, split by protraction (a straight line connecting the midpoints of its opposite sides), which is the standard BLM/GLO method for locating halves. Acreage is a proportional estimate, not an official BLM figure.`
-      : '';
-    document.getElementById('resultNote').innerHTML = matchNote + halfNote;
+    let computedNote = '';
+    if (computedQqq || computedHalf) {
+      const steps = [];
+      if (computedQqq) steps.push(`${qqq}¼ of the real surveyed ${qDescParent} boundary`);
+      if (computedHalf) steps.push(`${half}½ of ${computedQqq ? 'that' : `the real surveyed ${qDescParent} boundary`}`);
+      computedNote = ` <strong>Note:</strong> BLM doesn't map a separate polygon for this exact subdivision — anything finer than the 40-acre quarter-quarter usually isn't independently surveyed. This corner was computed as ${steps.join(', then ')}, split by protraction (a straight line connecting the midpoints of opposite sides), which is the standard BLM/GLO method${(computedQqq && computedHalf) ? ', applied twice' : ''}. Acreage is a proportional estimate, not an official BLM figure.`;
+    }
+    document.getElementById('resultNote').innerHTML = matchNote + computedNote;
 
     document.getElementById('results').style.display = 'block';
     setStatus('Done.', 'ok');

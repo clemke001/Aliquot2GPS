@@ -15,6 +15,12 @@ browser.
   CadNSDI** database across eleven public-land states: California, Arizona,
   Nevada, Oregon, Washington, Idaho, Utah, Montana, Wyoming, Colorado, and
   New Mexico.
+- Handles finer splits below the standard 40-acre quarter-quarter — a 20-acre
+  half of a quarter-quarter (e.g. S½ NW¼ NE¼) or a 10-acre quarter of a
+  quarter-quarter (e.g. NW¼ NE¼ SW¼) — by computing them via the standard
+  BLM/GLO protraction method when BLM doesn't map that finer piece as its own
+  polygon (it usually doesn't; only the 40-acre quarter-quarter is typically
+  independently surveyed).
 - Returns GPS coordinates for any corner (NE/NW/SE/SW) or the center of the
   parcel, in decimal degrees and DMS.
 - Lets you assemble a claim that spans multiple sections by calculating each
@@ -98,3 +104,9 @@ mining claims or locating property boundaries.
 ## License
 
 Eclipse Public License - v 2.0 (EPL-2.0). SPDX-License-Identifier: `EPL-2.0`.
+
+Before publishing, add a `LICENSE` file to the repo containing the full
+EPL-2.0 text from the canonical source: https://www.eclipse.org/legal/epl-2.0/
+(a tool-level restriction on this session prevented reproducing the full
+legal text verbatim here, so copy it directly from that link rather than
+from this README).
